@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartTask | Productivity Dashboard</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .card,
+        body.dark-mode .modal-content,
+        body.dark-mode .offcanvas,
+        body.dark-mode .dropdown-menu {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border-color: #334155;
+        }
+
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: #1e293b;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .table {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .navbar {
+            background-color: #1e293b !important;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: linear-gradient(180deg, #4f46e5, #4338ca);
+            color: white;
+            z-index: 1000;
+            transition: all 0.3s;
+            overflow-y: auto;
+        }
+
+        #sidebar.collapsed {
+            margin-left: calc(var(--sidebar-width) * -1);
+        }
+
+        #main-content {
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s;
+            min-height: 100vh;
+        }
+
+        #main-content.expanded {
+            margin-left: 0;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.85);
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            margin: 0.2rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background-color: rgba(255,255,255,0.15);
+            color: white;
+        }
+
+        .nav-link i {
+            width: 24px;
+        }
+
+        /* Cards */
+        .stat-card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .task-card {
+            border-left: 4px solid #cbd5e1;
+            transition: all 0.2s;
+        }
+
+        .task-card.priority-high { border-left-color: #ef4444; }
+        .task-card.priority-medium { border-left-color: #f59e0b; }
+        .task-card.priority-low { border-left-color: #22c55e; }
+
+        .task-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        /* Badge colors */
+        .badge-todo { background-color: #64748b; }
+        .badge-progress { background-color: #3b82f6; }
+        .badge-done { background-color: #22c55e; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 3px;
+        }
+
+        /* Toast container */
+        .toast-container {
+            z-index: 1100;
+        }
+
+        /* Mobile */
+        @media (max-width: 991.98px) {
+            #sidebar {
+                margin-left: calc(var(--sidebar-width) * -1);
+            }
+            #sidebar.show {
+                margin-left: 0;
+            }
+            #main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="sidebar-brand d-flex align-items-center gap-2">
+            <i class="bi bi-check2-square fs-3"></i>
+            <span>SmartTask</span>
+        </div>
+        
+        <nav class="nav flex-column mt-3">
+            <a class="nav-link active" href="#" data-section="dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a class="nav-link" href="#" data-section="tasks">
+                <i class="bi bi-list-task"></i> Tasks
+            </a>
+            <a class="nav-link" href="#" data-section="notes">
+                <i class="bi bi-journal-text"></i> Notes
+            </a>
+            <a class="nav-link" href="#" data-section="analytics">
+                <i class="bi bi-bar-chart"></i> Analytics
+            </a>
+        </nav>
+
+        <div class="mt-auto p-3" style="position: absolute; bottom: 0; width: 100%;">
+            <div class="d-flex align-items-center gap-2 text-white-50 small">
+                <i class="bi bi-person-circle fs-5"></i>
+                <div>
+                    <div class="text-white fw-medium">You</div>
+                    <div>Free Plan</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <!-- Top Navbar -->
+        <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top px-3 py-2">
+            <div class="container-fluid">
+                <button class="btn btn-light d-lg-none me-2" id="sidebarToggle">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                
+                <span class="navbar-brand fw-semibold d-none d-md-block">Welcome back 👋</span>
+                
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <!-- Search -->
+                    <div class="input-group input-group-sm d-none d-md-flex" style="width: 220px;">
+                        <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-0 bg-light" id="globalSearch" placeholder="Search tasks...">
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button class="btn btn-light btn-sm" id="themeToggle" title="Toggle Dark Mode">
+                        <i class="bi bi-moon-stars"></i>
+                    </button>
+
+                    <!-- Add Task Button -->
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#taskModal">
+                        <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">New Task</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Page Content -->
+        <div class="p-3 p-md-4">
+            
+            <!-- ================= DASHBOARD SECTION ================= -->
+            <div id="section-dashboard">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold mb-0">Dashboard</h4>
+                    <span class="text-muted small" id="currentDate"></span>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="text-muted small">Total Tasks</div>
+                                        <h3 class="fw-bold mb-0" id="statTotal">0</h3>
+                                    </div>
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2">
+                                        <i class="bi bi-list-check fs-4"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="text-muted small">Completed</div>
+                                        <h3 class="fw-bold mb-0 text-success" id="statCompleted">0</h3>
+                                    </div>
+                                    <div class="bg-success bg-opacity-10 text-success rounded-3 p-2">
+                                        <i class="bi bi-check-circle fs-4"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="text-muted small">In Progress</div>
+                                        <h3 class="fw-bold mb-0 text-primary" id="statProgress">0</h3>
+                                    </div>
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2">
+                                        <i class="bi bi-hourglass-split fs-4"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="text-muted small">High Priority</div>
+                                        <h3 class="fw-bold mb-0 text-danger" id="statHigh">0</h3>
+                                    </div>
+                                    <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-2">
+                                        <i class="bi bi-exclamation-triangle fs-4"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-medium">Overall Progress</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" id="progressBar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Tasks -->
+                <div class="card">
+                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-semibold">Recent Tasks</h6>
+                        <a href="#" class="small text-primary" data-section="tasks">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="recentTasksList" class="list-group list-group-flush">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TASKS SECTION ================= -->
+            <div id="section-tasks" class="d-none">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+                    <h4 class="fw-bold mb-0">All Tasks</h4>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="filterStatus" style="width: 140px;">
+                            <option value="all">All Status</option>
+                            <option value="todo">To Do</option>
+                            <option value="progress">In Progress</option>
+                            <option value="done">Completed</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="filterPriority" style="width: 140px;">
+                            <option value="all">All Priority</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3" id="tasksContainer">
+                    <!-- Tasks will be rendered here -->
+                </div>
+
+                <div id="noTasksMessage" class="text-center py-5 d-none">
+                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">No tasks found. Create your first task!</p>
+                </div>
+            </div>
+
+            <!-- ================= NOTES SECTION ================= -->
+            <div id="section-notes" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold mb-0">Quick Notes</h4>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#noteModal">
+                        <i class="bi bi-plus-lg"></i> New Note
+                    </button>
+                </div>
+
+                <div class="row g-3" id="notesContainer">
+                    <!-- Notes will be rendered here -->
+                </div>
+            </div>
+
+            <!-- ================= ANALYTICS SECTION ================= -->
+            <div id="section-analytics" class="d-none">
+                <h4 class="fw-bold mb-4">Analytics</h4>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="fw-semibold mb-3">Tasks by Status</h6>
+                                <canvas id="statusChart" height="220"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="fw-semibold mb-3">Tasks by Priority</h6>
+                                <canvas id="priorityChart" height="220"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= TASK MODAL ================= -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskModalTitle">Add New Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="taskForm">
+                        <input type="hidden" id="taskId">
+                        <div class="mb-3">
+                            <label class="form-label">Title *</label>
+                            <input type="text" class="form-control" id="taskTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="taskDesc" rows="3"></textarea>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">Priority</label>
+                                <select class="form-select" id="taskPriority">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="taskStatus">
+                                    <option value="todo">To Do</option>
+                                    <option value="progress">In Progress</option>
+                                    <option value="done">Completed</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" class="form-control" id="taskDue">
+                        </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveTaskBtn">Save Task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= NOTE MODAL ================= -->
+    <div class="modal fade" id="noteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Note</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="noteForm">
+                        <input type="hidden" id="noteId">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" id="noteTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-control" id="noteContent" rows="5" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveNoteBtn">Save Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // ==================== DATA & STATE ====================
+        let tasks = JSON.parse(localStorage.getItem('smarttask_tasks')) || [];
+        let notes = JSON.parse(localStorage.getItem('smarttask_notes')) || [];
+        let isDark = localStorage.getItem('smarttask_theme') === 'dark';
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isDark) document.body.classList.add('dark-mode');
+            updateThemeIcon();
+            renderAll();
+            setCurrentDate();
+            setupEventListeners();
+        });
+
+        // ==================== EVENT LISTENERS ====================
+        function setupEventListeners() {
+            // Sidebar navigation
+            document.querySelectorAll('[data-section]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = link.dataset.section;
+                    showSection(section);
+                    
+                    // Update active state
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    
+                    // Close sidebar on mobile
+                    if (window.innerWidth < 992) {
+                        document.getElementById('sidebar').classList.remove('show');
+                    }
+                });
+            });
+
+            // Sidebar toggle (mobile)
+            document.getElementById('sidebarToggle').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('show');
+            });
+
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+            // Save Task
+            document.getElementById('saveTaskBtn').addEventListener('click', saveTask);
+
+            // Save Note
+            document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
+
+            // Filters
+            document.getElementById('filterStatus').addEventListener('change', renderTasks);
+            document.getElementById('filterPriority').addEventListener('change', renderTasks);
+
+            // Global search
+            document.getElementById('globalSearch').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                // Simple filter for tasks section
+                if (!document.getElementById('section-tasks').classList.contains('d-none')) {
+                    renderTasks(query);
+                }
+            });
+
+            // Reset modal on close
+            document.getElementById('taskModal').addEventListener('hidden.bs.modal', () => {
+                document.getElementById('taskForm').reset();
+                document.getElementById('taskId').value = '';
+                document.getElementById('taskModalTitle').textContent = 'Add New Task';
+            });
+        }
+
+        // ==================== THEME ====================
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.classList.toggle('dark-mode', isDark);
+            localStorage.setItem('smarttask_theme', isDark ? 'dark' : 'light');
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const icon = document.querySelector('#themeToggle i');
+            icon.className = isDark ? 'bi bi-sun' : 'bi bi-moon-stars';
+        }
+
+        // ==================== SECTIONS ====================
+        function showSection(section) {
+            ['dashboard', 'tasks', 'notes', 'analytics'].forEach(s => {
+                document.getElementById(`section-${s}`).classList.toggle('d-none', s !== section);
+            });
+            
+            if (section === 'analytics') {
+                setTimeout(renderCharts, 100);
+            }
+        }
+
+        // ==================== TASKS ====================
+        function saveTask() {
+            const id = document.getElementById('taskId').value;
+            const title = document.getElementById('taskTitle').value.trim();
+            const desc = document.getElementById('taskDesc').value.trim();
+            const priority = document.getElementById('taskPriority').value;
+            const status = document.getElementById('taskStatus').value;
+            const due = document.getElementById('taskDue').value;
+
+            if (!title) {
+                showToast('Please enter a title', 'danger');
+                return;
+            }
+
+            if (id) {
+                // Edit
+                const index = tasks.findIndex(t => t.id === id);
+                if (index !== -1) {
+                    tasks[index] = { ...tasks[index], title, desc, priority, status, due };
+                    showToast('Task updated successfully');
+                }
+            } else {
+                // Add
+                const newTask = {
+                    id: Date.now().toString(),
+                    title,
+                    desc,
+                    priority,
+                    status,
+                    due,
+                    createdAt: new Date().toISOString()
+                };
+                tasks.unshift(newTask);
+                showToast('Task added successfully');
+            }
+
+            saveTasks();
+            renderAll();
+            bootstrap.Modal.getInstance(document.getElementById('taskModal')).hide();
+        }
+
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            document.getElementById('taskId').value = task.id;
+            document.getElementById('taskTitle').value = task.title;
+            document.getElementById('taskDesc').value = task.desc || '';
+            document.getElementById('taskPriority').value = task.priority;
+            document.getElementById('taskStatus').value = task.status;
+            document.getElementById('taskDue').value = task.due || '';
+            document.getElementById('taskModalTitle').textContent = 'Edit Task';
+
+            new bootstrap.Modal(document.getElementById('taskModal')).show();
+        }
+
+        function deleteTask(id) {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+            renderAll();
+            showToast('Task deleted');
+        }
+
+        function changeStatus(id, newStatus) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = newStatus;
+                saveTasks();
+                renderAll();
+            }
+        }
+
+        function saveTasks() {
+            localStorage.setItem('smarttask_tasks', JSON.stringify(tasks));
+        }
+
+        function renderTasks(searchQuery = '') {
+            const statusFilter = document.getElementById('filterStatus').value;
+            const priorityFilter = document.getElementById('filterPriority').value;
+            const container = document.getElementById('tasksContainer');
+            const noMsg = document.getElementById('noTasksMessage');
+
+            let filtered = tasks.filter(t => {
+                const matchStatus = statusFilter === 'all' || t.status === statusFilter;
+                const matchPriority = priorityFilter === 'all' || t.priority === priorityFilter;
+                const matchSearch = !searchQuery || 
+                    t.title.toLowerCase().includes(searchQuery) || 
+                    (t.desc && t.desc.toLowerCase().includes(searchQuery));
+                return matchStatus && matchPriority && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                noMsg.classList.remove('d-none');
+                return;
+            }
+
+            noMsg.classList.add('d-none');
+            container.innerHTML = filtered.map(task => `
+                <div class="col-md-6 col-xl-4">
+                    <div class="card task-card priority-${task.priority} h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title mb-0 fw-semibold">${escapeHtml(task.title)}</h6>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" onclick="editTask('${task.id}')"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteTask('${task.id}')"><i class="bi bi-trash me-2"></i>Delete</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            ${task.desc ? `<p class="card-text small text-muted mb-3">${escapeHtml(task.desc)}</p>` : ''}
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge badge-${task.status === 'todo' ? 'todo' : task.status === 'progress' ? 'progress' : 'done'}">
+                                    ${task.status === 'todo' ? 'To Do' : task.status === 'progress' ? 'In Progress' : 'Completed'}
+                                </span>
+                                <span class="badge bg-${task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'success'}">
+                                    ${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                                </span>
+                                ${task.due ? `<span class="badge bg-secondary"><i class="bi bi-calendar3 me-1"></i>${formatDate(task.due)}</span>` : ''}
+                            </div>
+                            <div class="btn-group btn-group-sm w-100">
+                                <button class="btn btn-outline-secondary ${task.status === 'todo' ? 'active' : ''}" onclick="changeStatus('${task.id}', 'todo')">To Do</button>
+                                <button class="btn btn-outline-primary ${task.status === 'progress' ? 'active' : ''}" onclick="changeStatus('${task.id}', 'progress')">Progress</button>
+                                <button class="btn btn-outline-success ${task.status === 'done' ? 'active' : ''}" onclick="changeStatus('${task.id}', 'done')">Done</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== NOTES ====================
+        function saveNote() {
+            const id = document.getElementById('noteId').value;
+            const title = document.getElementById('noteTitle').value.trim();
+            const content = document.getElementById('noteContent').value.trim();
+
+            if (!title || !content) {
+                showToast('Please fill all fields', 'danger');
+                return;
+            }
+
+            if (id) {
+                const index = notes.findIndex(n => n.id === id);
+                if (index !== -1) {
+                    notes[index] = { ...notes[index], title, content };
+                    showToast('Note updated');
+                }
+            } else {
+                notes.unshift({
+                    id: Date.now().toString(),
+                    title,
+                    content,
+                    createdAt: new Date().toISOString()
+                });
+                showToast('Note added');
+            }
+
+            saveNotes();
+            renderNotes();
+            bootstrap.Modal.getInstance(document.getElementById('noteModal')).hide();
+            document.getElementById('noteForm').reset();
+        }
+
+        function deleteNote(id) {
+            if (!confirm('Delete this note?')) return;
+            notes = notes.filter(n => n.id !== id);
+            saveNotes();
+            renderNotes();
+            showToast('Note deleted');
+        }
+
+        function saveNotes() {
+            localStorage.setItem('smarttask_notes', JSON.stringify(notes));
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notesContainer');
+            if (notes.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-journal fs-1 text-muted"></i>
+                        <p class="text-muted mt-2">No notes yet. Create one!</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = notes.map(note => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="fw-semibold">${escapeHtml(note.title)}</h6>
+                                <button class="btn btn-sm btn-light text-danger" onclick="deleteNote('${note.id}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            <p class="card-text small text-muted mt-2" style="white-space: pre-wrap;">${escapeHtml(note.content)}</p>
+                            <div class="small text-muted mt-3">${formatDate(note.createdAt)}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== STATS & DASHBOARD ====================
+        function updateStats() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.status === 'done').length;
+            const progress = tasks.filter(t => t.status === 'progress').length;
+            const high = tasks.filter(t => t.priority === 'high' && t.status !== 'done').length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statCompleted').textContent = completed;
+            document.getElementById('statProgress').textContent = progress;
+            document.getElementById('statHigh').textContent = high;
+
+            const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        function renderRecentTasks() {
+            const container = document.getElementById('recentTasksList');
+            const recent = tasks.slice(0, 5);
+
+            if (recent.length === 0) {
+                container.innerHTML = `<div class="list-group-item text-muted text-center py-4">No tasks yet</div>`;
+                return;
+            }
+
+            container.innerHTML = recent.map(task => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-medium">${escapeHtml(task.title)}</div>
+                        <small class="text-muted">${task.status === 'todo' ? 'To Do' : task.status === 'progress' ? 'In Progress' : 'Completed'}</small>
+                    </div>
+                    <span class="badge bg-${task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'success'}">
+                        ${task.priority}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // ==================== CHARTS ====================
+        let statusChart, priorityChart;
+
+        function renderCharts() {
+            const statusData = {
+                todo: tasks.filter(t => t.status === 'todo').length,
+                progress: tasks.filter(t => t.status === 'progress').length,
+                done: tasks.filter(t => t.status === 'done').length
+            };
+
+            const priorityData = {
+                high: tasks.filter(t => t.priority === 'high').length,
+                medium: tasks.filter(t => t.priority === 'medium').length,
+                low: tasks.filter(t => t.priority === 'low').length
+            };
+
+            // Destroy old charts
+            if (statusChart) statusChart.destroy();
+            if (priorityChart) priorityChart.destroy();
+
+            statusChart = new Chart(document.getElementById('statusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['To Do', 'In Progress', 'Completed'],
+                    datasets: [{
+                        data: [statusData.todo, statusData.progress, statusData.done],
+                        backgroundColor: ['#64748b', '#3b82f6', '#22c55e']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            priorityChart = new Chart(document.getElementById('priorityChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['High', 'Medium', 'Low'],
+                    datasets: [{
+                        label: 'Tasks',
+                        data: [priorityData.high, priorityData.medium, priorityData.low],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#22c55e']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // ==================== HELPERS ====================
+        function renderAll() {
+            updateStats();
+            renderTasks();
+            renderNotes();
+            renderRecentTasks();
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.querySelector('.toast-container');
+            const id = 'toast-' + Date.now();
+            const bg = type === 'danger' ? 'bg-danger' : 'bg-success';
+
+            container.insertAdjacentHTML('beforeend', `
+                <div id="${id}" class="toast align-items-center text-white ${bg} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+
+            const toastEl = document.getElementById(id);
+            const toast = new bootstrap.Toast(toastEl, { delay: 2500 });
+            toast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function setCurrentDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-IN', options);
+        }
+    </script>
+</body>
+</html>
